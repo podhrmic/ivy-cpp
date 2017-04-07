@@ -38,22 +38,27 @@ void IvyTest::Start()
   bus->ivyMainLoop();
 }
 
-// this is a callback for received messages - we ll use it for logging
+/**
+ * this is a callback for received messages
+ * right now it binds with all messages and displays them on terminal
+ * (sort of like ivyprobe)
+ */
 void IvyTest :: OnMessage(IvyApplication *app, int argc, const char **argv)
 {
   int i;
-  //printf ("%s sent ",app->GetName());
+  printf ("%s sent ",app->GetName());
   for  (i = 0; i < argc; i++)
       printf(" '%s'",argv[i]);
   printf("\n");
 }
 
-// this message processes time stamp (GPS message
-//
+/**
+ * This is an example of a callback for a particular (WORLD_ENV) message
+ * Does nothing except printing on screen.
+ */
 void IvyTest::OnWORLD_ENV ( IvyApplication *app, void *user_data, int argc, const char **argv )
 {
-  printf ("XXXXXXXXXXXXXXX\n");
-
+  printf ("Got WORLD_ENV message!\n");
 }
 
 
@@ -94,16 +99,23 @@ void IvyTest::OnApplicationFifoFull(IvyApplication *app)
 
 
 
+/*
+ * Here starts the multithreaded example
+ */
 
-IvyTest test;
-
-void ivy_thread()
+/**
+ * This thread starts the Ivy Bus and the enters the IvyMainLoop
+ */
+void ivy_thread( IvyTest *test)
 {
-  test.Start();
+  test->Start();
 }
 
-// here we send status messages on the ivy bus
-void msg_thread()
+
+/**
+ * This thread sends a status message every second
+ */
+void msg_thread( IvyTest *test)
 {
   static int id = 1;
   static float time = 0;
@@ -113,7 +125,7 @@ void msg_thread()
   static uint err = 0;
 
   while(true){
-    test.bus->SendMsg("%d COPILOT_STATUS %f %u %u %u %u",
+    test->bus->SendMsg("%d COPILOT_STATUS %f %u %u %u %u",
                          id, time, mem, disk, door, err);
       std::this_thread::sleep_for(std::chrono::seconds(1));
       time += 1.0;
@@ -122,15 +134,14 @@ void msg_thread()
 }
 
 int main() {
-  //test.Start();
+  IvyTest test;
 
   //Launch a thread
-  std::thread t1(ivy_thread);
-  std::thread t2(msg_thread);
+  std::thread t1(ivy_thread, &test);
+  std::thread t2(msg_thread, &test);
 
-  //Join the thread with the main thread
+  //Wait for the ivy_thread to end
   t1.join();
-  //t1.detach();
 
   return 0;
 }
