@@ -11,10 +11,8 @@ ifeq ($(os),Darwin)
     LD = g++ -dynamiclib -single_module
     LDFLAGS = -L$(IVY_PATH) -L/sw/lib -framework OpenGL -framework AGL -framework Carbon
 else
-    PERHAPS64 := $(shell uname --machine | perl -ne "print /64/ ? '64' : '';")
-    LIB:= lib$(PERHAPS64) #-pthread -L/usr/$(LIB)
-
-    CPPFLAGS = -MMD -I/usr/X11R6/include -I/usr/local/include/Ivy
+	LIB:= lib
+    CPPFLAGS = -I/usr/local/include/Ivy
     DSO_EXT = .so
     LD = g++ -shared -fPIC
     #PREFIX=/usr/local

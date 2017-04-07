@@ -27,8 +27,10 @@
 *.exe
 *.out
 *.app
+testIvy
 
 # Eclipse project files
 .settings
 .cproject
 .project  
+
