@@ -39,7 +39,7 @@ void IvyTest::Start()
 {
   bus->BindMsg( "(.*)", this );
   bus->BindMsg("^(\\S*) WORLD_ENV (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*)", &world_env_cb);
-  bus->start("10.0.0.255:2010");
+  bus->start(NULL);
   bus->ivyMainLoop();
 }
 
