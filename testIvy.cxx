@@ -1,6 +1,8 @@
-#include <iostream>
-#include <thread>
-#include <chrono>
+#include <iostream> // for io
+#include <thread> // for threads
+#include <chrono> // for thread sleep
+#include <string> // for string handling
+#include <unistd.h> // for getopt
 
 #include "Ivycpp.h"
 #include "IvyApplication.h"
@@ -8,6 +10,7 @@
 class IvyTest : public IvyApplicationCallback, public IvyMessageCallback {
 public:
   Ivy *bus;
+  const char *bus_domain;
   int counter = 0;
   void Start();
   void OnApplicationConnected(IvyApplication *app);
@@ -24,13 +27,14 @@ public:
   static void ivy_thread(IvyTest *test);
   static void message_thread(IvyTest *test);
 
-  IvyTest();
+  IvyTest(char* ivy_bus);
 private:
   static void ivyAppConnCb( IvyApplication *app ) {};
   static void ivyAppDiscConnCb( IvyApplication *app ) {};
 };
 
-IvyTest::IvyTest() : world_env_cb(OnWORLD_ENV,this) {
+IvyTest::IvyTest(char* ivy_bus) : world_env_cb(OnWORLD_ENV,this)  {
+  bus_domain=ivy_bus;
   bus = new Ivy( "TestIvy", "TestIvy READY",
       BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
 }
@@ -39,7 +43,7 @@ void IvyTest::Start()
 {
   bus->BindMsg( "(.*)", this );
   bus->BindMsg("^(\\S*) WORLD_ENV (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*)", &world_env_cb);
-  bus->start(NULL);
+  bus->start(bus_domain);
   bus->ivyMainLoop();
 }
 
@@ -105,13 +109,6 @@ void IvyTest::OnApplicationFifoFull(IvyApplication *app)
   std::cerr << "Ivy FIFO Full  notififation : MESSAGE WILL BE LOST\n";
 }
 
-
-
-
-/*
- * Here starts the multithreaded example
- */
-
 /**
  * This thread starts the Ivy Bus and the enters the IvyMainLoop
  */
@@ -138,11 +135,48 @@ void IvyTest::message_thread(IvyTest *test)
     std::this_thread::sleep_for(std::chrono::seconds(1));
     time += 1.0;
   }
-
 }
 
-int main() {
-  IvyTest test;
+
+/*
+ * Here starts the multithreaded example
+ */
+
+using namespace std;
+
+void showhelpinfo(char *s) {
+  cout<<"Usage:   "<<s<<" [-option] [argument]"<<endl;
+  cout<<"option:  "<<"-h  show help information"<<endl;
+  cout<<"         "<<"-b ivy bus (default is 127.255.255.255:2010)"<<endl;
+  cout<<"example: "<<s<<" -b 10.0.0.255:2010"<<endl;
+}
+
+int main(int argc, char** argv) {
+  char tmp;
+  char* ivy_bus = NULL;
+
+  while((tmp=getopt(argc,argv,"hb:"))!=-1)
+  {
+    switch(tmp)
+    {
+      /*option h show the help information*/
+      case 'h':
+        showhelpinfo(argv[0]);
+        exit(1);
+        break;
+      case 'b':
+        ivy_bus = optarg;
+        cout << "-b " << ivy_bus << endl;
+        break;
+      /*do nothing on default*/
+      default:
+        break;
+    }
+  }
+
+  IvyTest test(ivy_bus);
+
+
 
   //Launch a thread
   std::thread t1(IvyTest::ivy_thread, &test);
