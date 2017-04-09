@@ -8,6 +8,7 @@
 class IvyTest : public IvyApplicationCallback, public IvyMessageCallback {
 public:
   Ivy *bus;
+  int counter = 0;
   void Start();
   void OnApplicationConnected(IvyApplication *app);
   void OnApplicationDisconnected(IvyApplication *app);
@@ -16,25 +17,29 @@ public:
   void OnApplicationFifoFull(IvyApplication *app);
   void OnMessage(IvyApplication *app, int argc, const char **argv);
 
-  static void OnWORLD_ENV ( IvyApplication *app, void *user_data, int argc, const char **argv );
-  IvyTest();
+  IvyMessageCallbackFunction world_env_cb;
 
+  static void OnWORLD_ENV ( IvyApplication *app, void *user_data, int argc, const char **argv);
+
+  static void ivy_thread(IvyTest *test);
+  static void message_thread(IvyTest *test);
+
+  IvyTest();
 private:
-   static void ivyAppConnCb( IvyApplication *app ) {};
-   static void ivyAppDiscConnCb( IvyApplication *app ) {};
+  static void ivyAppConnCb( IvyApplication *app ) {};
+  static void ivyAppDiscConnCb( IvyApplication *app ) {};
 };
 
-IvyTest::IvyTest() {
+IvyTest::IvyTest() : world_env_cb(OnWORLD_ENV,this) {
   bus = new Ivy( "TestIvy", "TestIvy READY",
-           BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
+      BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
 }
 
 void IvyTest::Start()
 {
   bus->BindMsg( "(.*)", this );
-  bus->BindMsg("^(\\S*) WORLD_ENV (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*)",
-        new IvyMessageCallbackFunction(OnWORLD_ENV,NULL));
-  bus->start(NULL);
+  bus->BindMsg("^(\\S*) WORLD_ENV (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*)", &world_env_cb);
+  bus->start("10.0.0.255:2010");
   bus->ivyMainLoop();
 }
 
@@ -48,17 +53,21 @@ void IvyTest :: OnMessage(IvyApplication *app, int argc, const char **argv)
   int i;
   printf ("%s sent ",app->GetName());
   for  (i = 0; i < argc; i++)
-      printf(" '%s'",argv[i]);
+    printf(" '%s'",argv[i]);
   printf("\n");
 }
 
 /**
  * This is an example of a callback for a particular (WORLD_ENV) message
- * Does nothing except printing on screen.
+ * Shows how to pass the object to a static message so we can operate with
+ * the received data
  */
 void IvyTest::OnWORLD_ENV ( IvyApplication *app, void *user_data, int argc, const char **argv )
 {
+  static IvyTest ivy_test = (*(IvyTest *)user_data);
+  ivy_test.counter++;
   printf ("Got WORLD_ENV message!\n");
+  printf("counter=%u\n",ivy_test.counter);
 }
 
 
@@ -106,16 +115,15 @@ void IvyTest::OnApplicationFifoFull(IvyApplication *app)
 /**
  * This thread starts the Ivy Bus and the enters the IvyMainLoop
  */
-void ivy_thread( IvyTest *test)
+void IvyTest::ivy_thread(IvyTest *test)
 {
   test->Start();
 }
 
-
 /**
  * This thread sends a status message every second
  */
-void msg_thread( IvyTest *test)
+void IvyTest::message_thread(IvyTest *test)
 {
   static int id = 1;
   static float time = 0;
@@ -126,9 +134,9 @@ void msg_thread( IvyTest *test)
 
   while(true){
     test->bus->SendMsg("%d COPILOT_STATUS %f %u %u %u %u",
-                         id, time, mem, disk, door, err);
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      time += 1.0;
+        id, time, mem, disk, door, err);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    time += 1.0;
   }
 
 }
@@ -137,8 +145,8 @@ int main() {
   IvyTest test;
 
   //Launch a thread
-  std::thread t1(ivy_thread, &test);
-  std::thread t2(msg_thread, &test);
+  std::thread t1(IvyTest::ivy_thread, &test);
+  std::thread t2(IvyTest::message_thread, &test);
 
   //Wait for the ivy_thread to end
   t1.join();
