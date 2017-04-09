@@ -18,8 +18,11 @@
 #include <string> // for string handling
 #include <unistd.h> // for getopt
 
+
 #include "Ivycpp.h"
 #include "IvyApplication.h"
+
+using namespace std;
 
 class AggieCapTest : public IvyApplicationCallback, public IvyMessageCallback {
 public:
@@ -51,6 +54,9 @@ public:
   static void ivy_thread(AggieCapTest *test);
 
   AggieCapTest(char *domain);
+  AggieCapTest();
+
+
 private:
   static void ivyAppConnCb( IvyApplication *app ) {};
   static void ivyAppDiscConnCb( IvyApplication *app ) {};
@@ -70,10 +76,24 @@ AggieCapTest::AggieCapTest(char *domain)
   cb_gps_lla(OnGPS_LLA,this),
   cb_rotorcraft_fp(OnROTORCRAFT_FP,this)
   {
-  bus_domain_=domain;
+  bus_domain_= domain;
   bus = new Ivy( "AggieCapTest", "AggieCapTest READY",
       BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
 }
+
+
+AggieCapTest::AggieCapTest()
+: cb_wp_moved(OnWP_MOVED,this),
+  cb_vectornav_info(OnVECTORNAV_INFO,this),
+  cb_attitude(OnATTITUDE,this),
+  cb_gps_lla(OnGPS_LLA,this),
+  cb_rotorcraft_fp(OnROTORCRAFT_FP,this)
+  {
+  bus_domain_= NULL;
+  bus = new Ivy( "AggieCapTest", "AggieCapTest READY",
+      BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
+}
+
 
 void AggieCapTest::Start()
 {
@@ -175,7 +195,7 @@ void AggieCapTest::ivy_thread(AggieCapTest *test)
  */
 void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
 {
-  static int ac_id = 1;
+  static int ac_id = 1; // use AC_ID and include airframe.h
   static uint camera_id = 12345;
   static uint camera_state = 0;
   static uint snapshot_image_number = 0;
@@ -209,7 +229,7 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
  */
 void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
 {
-  static int ac_id = 1;
+  static int ac_id = 1; // use AC_ID and include airframe.h
   static float time = 0;
   static uint mem = 30;
   static uint disk = 60;
@@ -239,8 +259,8 @@ void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
 void AggieCapTest::periodic_move_wp(AggieCapTest *test)
 {
   static uint sender_id = 1;
-  static uint ac_id = 1;
-  static uint wp_id = 17;
+  static uint ac_id = 1; // use AC_ID and include airframe.h
+  static uint wp_id = 18; // normally we use WP_PAYLOAD here and include flight_plan.h
   static int lat = 418155620;
   static int lon = -1119824370;
   static int alt = 1350*1000; // 1350 m
@@ -256,8 +276,6 @@ void AggieCapTest::periodic_move_wp(AggieCapTest *test)
   }
 }
 
-
-using namespace std;
 
 void showhelpinfo(char *s) {
   cout<<"Usage:   "<<s<<" [-option] [argument]"<<endl;
