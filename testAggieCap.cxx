@@ -242,7 +242,7 @@ void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // increment variables
-    time += 1.0;
+    time += 2.0;
   }
 }
 
@@ -275,7 +275,6 @@ void AggieCapTest::periodic_move_wp(AggieCapTest *test)
     lat = lat + 100;
   }
 }
-
 
 void showhelpinfo(char *s) {
   cout<<"Usage:   "<<s<<" [-option] [argument]"<<endl;
@@ -312,8 +311,11 @@ int main(int argc, char** argv) {
 
   //Launch a thread
   std::thread t1(AggieCapTest::ivy_thread, &test);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
   std::thread t2(AggieCapTest::periodic_camera_snapshot, &test);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
   std::thread t3(AggieCapTest::periodic_camera_payload, &test);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
   std::thread t4(AggieCapTest::periodic_move_wp, &test);
 
   //Wait for the ivy_thread to end
