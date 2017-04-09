@@ -83,6 +83,9 @@ LLDLIBS = -L. -Wl,-rpath,. -L$(IVY_PATH)/src -Wl,-rpath,/usr/local/lib64 -L/usr/
 
 testIvy : testIvy.cxx
 	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testIvy.cxx -lIvy -pthread
+	
+testAggieCap : testAggieCap.cxx
+	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testAggieCap.cxx -lIvy -pthread
 
 
 distclean clean : 

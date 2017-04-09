@@ -28,6 +28,7 @@
 *.out
 *.app
 testIvy
+testAggieCap
 
 # Eclipse project files
 .settings
