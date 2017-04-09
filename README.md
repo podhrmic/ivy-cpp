@@ -1,8 +1,6 @@
 # ivy-cpp
 Ivy Bus implementation in C++11, original code cloned from https://svn.tls.cena.fr/svn/ivy/ivy-c++/trunk
 
-**NOTE** This implementation assumes there is only one application running the *ivyMainLoop* - if that is not the case, proceed at your own risk.
-
 this is the c++ api for ivy.
 
 It's a wrapper over ivy-c, so ivy-c should be installed prior this.
