@@ -9,6 +9,13 @@
  * ATTITUDE (for FW attitude)
  * ROTORCRAFT_FP (for Rotorcraft attitude)
  * GPS_LLA (for FW/ROTORCRAFT position info and time info)
+ *
+ * Other messages it binds to:
+ * ACTUATORS
+ * COMMANDS
+ *
+ * See https://github.com/paparazzi/pprzlink/blob/master/message_definitions/v1.0/messages.xml
+ * for message definition (useful when you are parsing the messages).
  */
 
 
@@ -18,6 +25,7 @@
 #include <string> // for string handling
 #include <unistd.h> // for getopt
 
+#define DEBUG 0
 
 #include "Ivycpp.h"
 #include "IvyApplication.h"
@@ -204,8 +212,13 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
   static float array_temp = 33.3;
 
   while(true){
-    test->bus->SendMsg("aggiecap CAMERA_SHOT %u %u %u %u %u %f %f",
+#if DEBUG
+    test->bus->SendMsg("aggiecap CAMERA_SNAPSHOT %u %u %u %u %u %f %f",
         ac_id, camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
+#else
+    test->bus->SendMsg("aggiecap CAMERA_SHOT %u %u %u %u %u %f %f",
+            ac_id, camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
+#endif
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // increment variables
@@ -237,8 +250,13 @@ void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
   static uint err = 0;
 
   while(true){
-    test->bus->SendMsg("aggiecap CAMERA_PAYL %u %f %u %u %u %u",
+#if DEBUG
+    test->bus->SendMsg("aggiecap CAMERA_PAYLOAD %u %f %u %u %u %u",
         ac_id, time, mem, disk, door, err);
+#else
+    test->bus->SendMsg("aggiecap CAMERA_PAYL %u %f %u %u %u %u",
+            ac_id, time, mem, disk, door, err);
+#endif
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // increment variables
