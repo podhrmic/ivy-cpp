@@ -195,7 +195,7 @@ void AggieCapTest::ivy_thread(AggieCapTest *test)
  */
 void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
 {
-  static int ac_id = 1; // use AC_ID and include airframe.h
+  static uint ac_id = 1; // use AC_ID and include airframe.h
   static uint camera_id = 12345;
   static uint camera_state = 0;
   static uint snapshot_image_number = 0;
@@ -204,8 +204,8 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
   static float array_temp = 33.3;
 
   while(true){
-    test->bus->SendMsg("aggiecap CAMERA_SHOT %u %u %u %u %f %f",
-        camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
+    test->bus->SendMsg("aggiecap CAMERA_SHOT %u %u %u %u %u %f %f",
+        ac_id, camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // increment variables
@@ -229,7 +229,7 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
  */
 void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
 {
-  static int ac_id = 1; // use AC_ID and include airframe.h
+  static uint ac_id = 1; // use AC_ID and include airframe.h
   static float time = 0;
   static uint mem = 30;
   static uint disk = 60;
@@ -237,8 +237,8 @@ void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
   static uint err = 0;
 
   while(true){
-    test->bus->SendMsg("aggiecap CAMERA_PAYLOAD %f %u %u %u %u",
-        time, mem, disk, door, err);
+    test->bus->SendMsg("aggiecap CAMERA_PAYL %u %f %u %u %u %u",
+        ac_id, time, mem, disk, door, err);
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // increment variables
