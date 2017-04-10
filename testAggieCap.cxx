@@ -204,7 +204,7 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
   static float array_temp = 33.3;
 
   while(true){
-    test->bus->SendMsg("%d CAMERA_SNAPSHOT %u %u %u %u %f %f",
+    test->bus->SendMsg("%d CAMERA_SHOT %u %u %u %u %f %f",
         ac_id, camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -237,7 +237,7 @@ void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
   static uint err = 0;
 
   while(true){
-    test->bus->SendMsg("%d CAMERA_PAYLOAD %f %u %u %u %u",
+    test->bus->SendMsg("%d CAMERA_PAYL %f %u %u %u %u",
         ac_id, time, mem, disk, door, err);
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
