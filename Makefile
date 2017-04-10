@@ -2,7 +2,6 @@
 # $Id: Makefile 3625 2014-12-09 14:28:33Z bustico $
 
 os=$(shell uname -s)
-PATH := $(PATH):/usr/lib/qt4/bin/:/usr/share/qt4/bin/
 
 ifeq ($(os),Darwin)
     IVY_PATH := $(HOME)/src-ext/ivy-c-3.6/src
@@ -83,6 +82,9 @@ LLDLIBS = -L. -Wl,-rpath,. -L$(IVY_PATH)/src -Wl,-rpath,/usr/local/lib64 -L/usr/
 
 testIvy : testIvy.cxx
 	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testIvy.cxx -lIvy -pthread
+	
+testCopilot : testCopilot.cxx
+	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testCopilot.cxx -lIvy -pthread
 	
 testAggieCap : testAggieCap.cxx
 	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testAggieCap.cxx -lIvy -pthread

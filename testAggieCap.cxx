@@ -204,8 +204,8 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
   static float array_temp = 33.3;
 
   while(true){
-    test->bus->SendMsg("%d CAMERA_SHOT %u %u %u %u %f %f",
-        ac_id, camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
+    test->bus->SendMsg("aggiecap CAMERA_SHOT %u %u %u %u %f %f",
+        camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // increment variables
@@ -237,8 +237,8 @@ void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
   static uint err = 0;
 
   while(true){
-    test->bus->SendMsg("%d CAMERA_PAYL %f %u %u %u %u",
-        ac_id, time, mem, disk, door, err);
+    test->bus->SendMsg("aggiecap CAMERA_PAYLOAD %f %u %u %u %u",
+        time, mem, disk, door, err);
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // increment variables
@@ -266,8 +266,8 @@ void AggieCapTest::periodic_move_wp(AggieCapTest *test)
   static int alt = 1350*1000; // 1350 m
 
   while(true){
-    test->bus->SendMsg("%d MOVE_WP %u %u %d %d %d",
-        sender_id, wp_id, ac_id, lat, lon, alt);
+    test->bus->SendMsg("aggiecap MOVE_WP %u %u %d %d %d",
+        wp_id, ac_id, lat, lon, alt);
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
     // increment variables
