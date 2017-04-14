@@ -59,6 +59,7 @@ public:
   static void periodic_camera_snapshot(AggieCapTest *test);
   static void periodic_camera_payload(AggieCapTest *test);
   static void periodic_move_wp(AggieCapTest *test);
+  static void periodic_send_time(AggieCapTest *test);
   static void ivy_thread(AggieCapTest *test);
 
   AggieCapTest(char *domain);
@@ -75,6 +76,8 @@ private:
   const char* ATTITUDE = "^(\\S*) ATTITUDE (\\S*) (\\S*) (\\S*)";
   const char* GPS_LLA =  "^(\\S*) GPS_LLA (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*)";
   const char* ROTORCRAFT_FP = "^(\\S*) ROTORCRAFT_FP (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*)";
+
+  float sec_since_startup_;
 };
 
 AggieCapTest::AggieCapTest(char *domain)
@@ -84,6 +87,7 @@ AggieCapTest::AggieCapTest(char *domain)
   cb_gps_lla(OnGPS_LLA,this),
   cb_rotorcraft_fp(OnROTORCRAFT_FP,this)
   {
+  sec_since_startup_ = 0.0;
   bus_domain_= domain;
   bus = new Ivy( "AggieCapTest", "AggieCapTest READY",
       BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
@@ -97,6 +101,7 @@ AggieCapTest::AggieCapTest()
   cb_gps_lla(OnGPS_LLA,this),
   cb_rotorcraft_fp(OnROTORCRAFT_FP,this)
   {
+  sec_since_startup_ = 0.0;
   bus_domain_= NULL;
   bus = new Ivy( "AggieCapTest", "AggieCapTest READY",
       BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
@@ -122,31 +127,31 @@ void AggieCapTest::Start()
 
 void AggieCapTest::OnWP_MOVED ( IvyApplication *app, void *user_data, int argc, const char **argv )
 {
-  static AggieCapTest ag_cap = (*(AggieCapTest *)user_data);
+  AggieCapTest* copilot = static_cast<AggieCapTest*>(user_data);
   printf ("Got WP_MOVED message.\n");
 }
 
 void AggieCapTest::OnVECTORNAV_INFO ( IvyApplication *app, void *user_data, int argc, const char **argv )
 {
-  static AggieCapTest ag_cap = (*(AggieCapTest *)user_data);
+  AggieCapTest* copilot = static_cast<AggieCapTest*>(user_data);
   printf ("Got OnVECTORNAV_INFO message.\n");
 }
 
 void AggieCapTest::OnATTITUDE ( IvyApplication *app, void *user_data, int argc, const char **argv )
 {
-  static AggieCapTest ag_cap = (*(AggieCapTest *)user_data);
+  AggieCapTest* copilot = static_cast<AggieCapTest*>(user_data);
   printf ("Got OnATTITUDE message.\n");
 }
 
 void AggieCapTest::OnGPS_LLA ( IvyApplication *app, void *user_data, int argc, const char **argv )
 {
-  static AggieCapTest ag_cap = (*(AggieCapTest *)user_data);
+  AggieCapTest* copilot = static_cast<AggieCapTest*>(user_data);
   printf ("Got GPS_LLA message.\n");
 }
 
 void AggieCapTest::OnROTORCRAFT_FP ( IvyApplication *app, void *user_data, int argc, const char **argv )
 {
-  static AggieCapTest ag_cap = (*(AggieCapTest *)user_data);
+  AggieCapTest* copilot = static_cast<AggieCapTest*>(user_data);
   printf ("Got ROTORCRAFT_FP message.\n");
 }
 
@@ -192,7 +197,9 @@ void AggieCapTest::ivy_thread(AggieCapTest *test)
 }
 
 /**
- *   <message name="CAMERA_SNAPSHOT" id="128">
+ *
+    <message name="CAMERA_SHOT" id="35" link="forwarded">
+      <field name="ac_id" type="uint8"/>
       <field name="camera_id" type="uint16">Unique camera ID - consists of make,model and camera index</field>
       <field name="camera_state" type="uint8" values="UNKNOWN|OK|ERROR">State of the given camera</field>
       <field name="snapshot_image_number" type="uint16">Snapshot number in sequence</field>
@@ -232,7 +239,8 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
 
 /**
  *
- *  <message name="CAMERA_PAYLOAD" id="111">
+    <message name="CAMERA_PAYL" id="34" link="forwarded">
+      <field name="ac_id" type="uint8"/>
       <field name="timestamp" type="float" unit="s">Payload computer timestamp</field>
       <field name="used_memory" type="uint8" unit="%">Percentage of used memory (RAM) of the payload computer rounded up to whole percent</field>
       <field name="used_disk" type="uint8" unit="%">Percentage of used disk of the payload computer rounded up to whole percent</field>
@@ -243,7 +251,6 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
 void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
 {
   static uint ac_id = 1; // use AC_ID and include airframe.h
-  static float time = 0;
   static uint mem = 30;
   static uint disk = 60;
   static uint door = 1;
@@ -252,21 +259,22 @@ void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
   while(true){
 #if DEBUG
     test->bus->SendMsg("aggiecap CAMERA_PAYLOAD %u %f %u %u %u %u",
-        ac_id, time, mem, disk, door, err);
+        ac_id, test->sec_since_startup_, mem, disk, door, err);
 #else
     test->bus->SendMsg("aggiecap CAMERA_PAYL %u %f %u %u %u %u",
-            ac_id, time, mem, disk, door, err);
+            ac_id, test->sec_since_startup_, mem, disk, door, err);
 #endif
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // increment variables
-    time += 2.0;
+    test->sec_since_startup_ += 2.0;
   }
 }
 
 
 /**
- *     <message name="MOVE_WP" id="2" link="forwarded">
+ *
+    <message name="MOVE_WP" id="2" link="forwarded">
       <field name="wp_id" type="uint8"/>
       <field name="ac_id" type="uint8"/>
       <field name="lat" type="int32" unit="1e7deg" alt_unit="deg" alt_unit_coef="0.0000001"/>
@@ -292,6 +300,30 @@ void AggieCapTest::periodic_move_wp(AggieCapTest *test)
     alt = alt + (10*1000);
     lat = lat + 100;
   }
+}
+
+
+/**
+ * Broadcast time information for time synchronization between components
+    <message name="TIME" id="227">
+      <field name="t" type="uint32">an integral value representing the number of seconds elapsed since 00:00 hours, Jan 1, 1970 UTC</field>
+    </message>
+ */
+void AggieCapTest::periodic_send_time(AggieCapTest *test)
+{
+  time_t rawtime;
+
+  while(true){
+    // update time
+    time (&rawtime);
+
+    // broadcast
+    test->bus->SendMsg("aggiecap TIME %u", (uint32_t)rawtime);
+
+    // sleep for 5 seconds
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+  }
+
 }
 
 void showhelpinfo(char *s) {
@@ -335,7 +367,8 @@ int main(int argc, char** argv) {
   std::thread t3(AggieCapTest::periodic_camera_payload, &test);
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   std::thread t4(AggieCapTest::periodic_move_wp, &test);
-
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  std::thread t5(AggieCapTest::periodic_send_time, &test);
   //Wait for the ivy_thread to end
   t1.join();
 

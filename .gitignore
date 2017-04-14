@@ -29,9 +29,12 @@
 *.app
 testIvy
 testAggieCap
+testCopilot
 
 # Eclipse project files
 .settings
 .cproject
 .project  
 
+# Data files
+*.data

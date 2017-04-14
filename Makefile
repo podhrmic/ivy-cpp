@@ -57,7 +57,7 @@ else
 endif
 
 default: $(LIBIVY_STATIC) $(LIBIVY_SHARED) \
-	 testIvy
+	 testIvy testAggieCap testCopilot
 
 %.o: %.cxx
 	$(CC) -c $<
@@ -93,7 +93,7 @@ testAggieCap : testAggieCap.cxx
 distclean clean : 
 	rm -f $(LIBIVY_STATIC) $(LIBIVY_SHARED) \
 		$(OBJECTS) $(DEPS) \
-		core *.o *.d *~ *.moc testIvy
+		core *.o *.d *~ *.moc testIvy testAggieCap testCopilot
 
 -include *.d
 
