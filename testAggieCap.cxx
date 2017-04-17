@@ -24,8 +24,9 @@
 #include <chrono> // for thread sleep
 #include <string> // for string handling
 #include <unistd.h> // for getopt
-
-#define DEBUG 0
+#include <sstream> // string operations
+#include <string.h> // strings
+#include <vector> // for vectors
 
 #include "Ivycpp.h"
 #include "IvyApplication.h"
@@ -62,6 +63,7 @@ public:
   static void periodic_send_time(AggieCapTest *test);
   static void ivy_thread(AggieCapTest *test);
 
+  AggieCapTest(char *domain, bool debug);
   AggieCapTest(char *domain);
   AggieCapTest();
 
@@ -78,7 +80,28 @@ private:
   const char* ROTORCRAFT_FP = "^(\\S*) ROTORCRAFT_FP (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*) (\\S*)";
 
   float sec_since_startup_;
+
+  const char* name_ = "aggiecap"; // ivy node name
+  bool debug_; // are we in debug mode?
+
+  // sender message names
+  std::vector<std::string> camera_snapshot_ = {"CAMERA_SNAPSHOT_DL","CAMERA_SNAPSHOT"};
+  std::vector<std::string> camera_payload_ = {"CAMERA_PAYLOAD_DL","CAMERA_PAYLOAD"};
 };
+
+AggieCapTest::AggieCapTest(char *domain, bool debug)
+: cb_wp_moved(OnWP_MOVED,this),
+  cb_vectornav_info(OnVECTORNAV_INFO,this),
+  cb_attitude(OnATTITUDE,this),
+  cb_gps_lla(OnGPS_LLA,this),
+  cb_rotorcraft_fp(OnROTORCRAFT_FP,this)
+  {
+  debug_ = debug;
+  sec_since_startup_ = 0.0;
+  bus_domain_= domain;
+  bus = new Ivy( "AggieCapTest", "AggieCapTest READY",
+      BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
+}
 
 AggieCapTest::AggieCapTest(char *domain)
 : cb_wp_moved(OnWP_MOVED,this),
@@ -87,6 +110,7 @@ AggieCapTest::AggieCapTest(char *domain)
   cb_gps_lla(OnGPS_LLA,this),
   cb_rotorcraft_fp(OnROTORCRAFT_FP,this)
   {
+  debug_ = false;
   sec_since_startup_ = 0.0;
   bus_domain_= domain;
   bus = new Ivy( "AggieCapTest", "AggieCapTest READY",
@@ -101,6 +125,7 @@ AggieCapTest::AggieCapTest()
   cb_gps_lla(OnGPS_LLA,this),
   cb_rotorcraft_fp(OnROTORCRAFT_FP,this)
   {
+  debug_ = false;
   sec_since_startup_ = 0.0;
   bus_domain_= NULL;
   bus = new Ivy( "AggieCapTest", "AggieCapTest READY",
@@ -198,7 +223,7 @@ void AggieCapTest::ivy_thread(AggieCapTest *test)
 
 /**
  *
-    <message name="CAMERA_SHOT" id="35" link="forwarded">
+    <message name="CAMERA_SNAPSHOT_DL" id="35" link="forwarded">
       <field name="ac_id" type="uint8"/>
       <field name="camera_id" type="uint16">Unique camera ID - consists of make,model and camera index</field>
       <field name="camera_state" type="uint8" values="UNKNOWN|OK|ERROR">State of the given camera</field>
@@ -219,14 +244,13 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
   static float array_temp = 33.3;
 
   while(true){
-#if DEBUG
-    test->bus->SendMsg("aggiecap CAMERA_SNAPSHOT %u %u %u %u %u %f %f",
-        ac_id, camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
-#else
-    test->bus->SendMsg("aggiecap CAMERA_SHOT %u %u %u %u %u %f %f",
+    test->bus->SendMsg("%s %s %u %u %u %u %u %f %f",
+            test->name_,
+            test->camera_snapshot_.at(test->debug_).c_str(),
             ac_id, camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
-#endif
     std::this_thread::sleep_for(std::chrono::seconds(1));
+
+
 
     // increment variables
     camera_state++;
@@ -239,7 +263,7 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
 
 /**
  *
-    <message name="CAMERA_PAYL" id="34" link="forwarded">
+    <message name="CAMERA_PAYLOAD_DL" id="34" link="forwarded">
       <field name="ac_id" type="uint8"/>
       <field name="timestamp" type="float" unit="s">Payload computer timestamp</field>
       <field name="used_memory" type="uint8" unit="%">Percentage of used memory (RAM) of the payload computer rounded up to whole percent</field>
@@ -257,13 +281,10 @@ void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
   static uint err = 0;
 
   while(true){
-#if DEBUG
-    test->bus->SendMsg("aggiecap CAMERA_PAYLOAD %u %f %u %u %u %u",
-        ac_id, test->sec_since_startup_, mem, disk, door, err);
-#else
-    test->bus->SendMsg("aggiecap CAMERA_PAYL %u %f %u %u %u %u",
+    test->bus->SendMsg("%s %s %u %f %u %u %u %u",
+            test->name_,
+            test->camera_payload_.at(test->debug_).c_str(),
             ac_id, test->sec_since_startup_, mem, disk, door, err);
-#endif
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // increment variables
@@ -330,14 +351,16 @@ void showhelpinfo(char *s) {
   cout<<"Usage:   "<<s<<" [-option] [argument]"<<endl;
   cout<<"option:  "<<"-h  show help information"<<endl;
   cout<<"         "<<"-b ivy bus (default is 127.255.255.255:2010)"<<endl;
+  cout<<"         "<<"-d simulation mode on/off (default is false, use 'true' or '1')"<<endl;
   cout<<"example: "<<s<<" -b 10.0.0.255:2010"<<endl;
 }
 
 int main(int argc, char** argv) {
   char tmp;
   char* ivy_bus = NULL;
+  bool debug = false;
 
-  while((tmp=getopt(argc,argv,"hb:"))!=-1)
+  while((tmp=getopt(argc,argv,"hb:d:"))!=-1)
   {
     switch(tmp)
     {
@@ -350,13 +373,23 @@ int main(int argc, char** argv) {
         ivy_bus = optarg;
         cout << "-b " << ivy_bus << endl;
         break;
+      case 'd':
+        // check values of debug argument
+        if (!strcmp("true",optarg)) {
+          // equals true
+          debug = true;
+        }
+        if (!strcmp("1",optarg)) {
+          debug = true;
+        }
+        break;
       /*do nothing on default*/
       default:
         break;
     }
   }
 
-  AggieCapTest test(ivy_bus);
+  AggieCapTest test(ivy_bus, debug);
 
 
   //Launch a thread

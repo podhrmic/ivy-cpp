@@ -56,6 +56,7 @@ public:
   static void periodic_send_status(CopilotTest *test);
   static void ivy_thread(CopilotTest *test);
 
+  CopilotTest(char *domain, bool debug);
   CopilotTest(char *domain);
   CopilotTest();
 
@@ -74,11 +75,31 @@ private:
   enum CopilotStatus status_;
 
   Clock::time_point t0;
+
+  const char* name_ = "copilot"; // ivy node name
+  bool debug_; // are we in debug mode?
+
+  // sender message names
+  std::vector<std::string> copilot_status_ = {"COPILOT_STATUS_DL","COPILOT_STATUS"};
 };
+
+CopilotTest::CopilotTest(char *domain, bool debug)
+: cb_time(OnTIME,this)
+  {
+  debug_ = debug;
+  sec_since_startup_ = 0.0;
+  status_ = INIT;
+  rawtime_ = 0;
+  timeinfo_ = NULL;
+  bus_domain_= domain;
+  bus = new Ivy( "CopilotTest", "CopilotTest READY",
+      BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
+}
 
 CopilotTest::CopilotTest(char *domain)
 : cb_time(OnTIME,this)
   {
+  debug_ = false;
   sec_since_startup_ = 0.0;
   status_ = INIT;
   rawtime_ = 0;
@@ -92,6 +113,7 @@ CopilotTest::CopilotTest(char *domain)
 CopilotTest::CopilotTest()
 : cb_time(OnTIME,this)
   {
+  debug_ = false;
   sec_since_startup_ = 0.0;
   status_ = INIT;
   rawtime_ = 0;
@@ -310,7 +332,7 @@ void CopilotTest::ivy_thread(CopilotTest *test)
 
 /**
  *
-    <message name="COPILOT_STAT" id="33" link="forwarded">
+    <message name="COPILOT_STATUS_DL" id="33" link="forwarded">
       <field name="ac_id" type="uint8"/>
       <field name="timestamp" type="float" unit="s">Mission computer timestamp</field>
       <field name="used_memory" type="uint8" unit="%">Percentage of used memory (RAM) of the mission computer rounded up to whole percent</field>
@@ -327,13 +349,10 @@ void CopilotTest::periodic_send_status(CopilotTest *test)
   static uint err = 0;
 
   while(true){
-#if DEBUG
-    test->bus->SendMsg("copilot COPILOT_STATUS %u %f %u %u %u %u",
-        ac_id, test->sec_since_startup_, mem, disk, test->status_, err);
-#else
-    test->bus->SendMsg("copilot COPILOT_STAT %u %f %u %u %u %u",
+    test->bus->SendMsg("%s %s %u %f %u %u %u %u",
+            test->name_,
+            test->copilot_status_.at(test->debug_).c_str(),
             ac_id, test->sec_since_startup_, mem, disk, test->status_, err);
-#endif
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // increment variables
@@ -348,14 +367,16 @@ void showhelpinfo(char *s) {
   cout<<"Usage:   "<<s<<" [-option] [argument]"<<endl;
   cout<<"option:  "<<"-h  show help information"<<endl;
   cout<<"         "<<"-b ivy bus (default is 127.255.255.255:2010)"<<endl;
+  cout<<"         "<<"-d simulation mode (default is false, use 'true' or '1')"<<endl;
   cout<<"example: "<<s<<" -b 10.0.0.255:2010"<<endl;
 }
 
 int main(int argc, char** argv) {
   char tmp;
   char* ivy_bus = NULL;
+  bool debug = false;
 
-  while((tmp=getopt(argc,argv,"hb:"))!=-1)
+  while((tmp=getopt(argc,argv,"hb:d:"))!=-1)
   {
     switch(tmp)
     {
@@ -368,13 +389,23 @@ int main(int argc, char** argv) {
         ivy_bus = optarg;
         cout << "-b " << ivy_bus << endl;
         break;
+      case 'd':
+        // check values of debug argument
+        if (!strcmp("true",optarg)) {
+          // equals true
+          debug = true;
+        }
+        if (!strcmp("1",optarg)) {
+          debug = true;
+        }
+        break;
       /*do nothing on default*/
       default:
         break;
     }
   }
 
-  CopilotTest test(ivy_bus);
+  CopilotTest test(ivy_bus, debug);
 
 
   //Launch a thread
