@@ -65,7 +65,7 @@ private:
 
   Clock::time_point t0;
 
-  const char* name_ = "vectornav-sim"; // ivy node name
+  const char* name_ = "vectornavtest"; // ivy node name
   const char* msg_name_ = "VECTORNAV_INFO"; // message name
   const int default_rate_ = 100; // 100Hz by default
 };
