@@ -89,11 +89,13 @@ testCopilot : testCopilot.cxx
 testAggieCap : testAggieCap.cxx
 	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testAggieCap.cxx -lIvy -pthread
 
+testVectornav : testVectornav.cxx
+	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testVectornav.cxx -lIvy -pthread
 
 distclean clean : 
 	rm -f $(LIBIVY_STATIC) $(LIBIVY_SHARED) \
 		$(OBJECTS) $(DEPS) \
-		core *.o *.d *~ *.moc testIvy testAggieCap testCopilot
+		core *.o *.d *~ *.moc testIvy testAggieCap testCopilot testVectornav
 
 -include *.d
 

@@ -30,6 +30,7 @@
 testIvy
 testAggieCap
 testCopilot
+testVectornav
 
 # Eclipse project files
 .settings

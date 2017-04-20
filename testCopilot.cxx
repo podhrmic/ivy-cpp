@@ -6,7 +6,6 @@
  * - sends periodically COPILOT_INFO message
  */
 
-#define DEBUG 0
 
 #include <iostream> // for io
 #include <thread> // for threads
