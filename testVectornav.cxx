@@ -50,6 +50,7 @@ public:
   static void periodic_send_status(VectornavTest *test);
   static void ivy_thread(VectornavTest *test);
 
+  VectornavTest(char *domain, int rate, char* name);
   VectornavTest(char *domain, int rate);
   VectornavTest(char *domain);
   VectornavTest();
@@ -65,10 +66,23 @@ private:
 
   Clock::time_point t0;
 
-  const char* name_ = "vectornavtest"; // ivy node name
+  string name_ = "vectornavtest"; // ivy node name
   const char* msg_name_ = "VECTORNAV_INFO"; // message name
   const int default_rate_ = 100; // 100Hz by default
 };
+
+VectornavTest::VectornavTest(char *domain, int rate, char* name)
+  {
+  rate_ = rate;
+  timestamp_ = 0.0;
+  bus_domain_= domain;
+  if (name != NULL) {
+    this->name_ = string(name);
+  }
+
+  bus = new Ivy( this->name_.c_str(), "VectornavTest READY",
+      BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
+}
 
 VectornavTest::VectornavTest(char *domain, int rate)
   {
@@ -182,7 +196,7 @@ void VectornavTest::periodic_send_status(VectornavTest *test)
     test->timestamp_ = dt;
 
     test->bus->SendMsg("%s %s %f %u %u %u %u %u %f %f %f",
-            test->name_,
+            test->name_.c_str(),
             test->msg_name_,
             test->timestamp_,
             err, err, rate, status, err, unc, unc, unc);
@@ -197,6 +211,7 @@ void showhelpinfo(char *s) {
   cout<<"Usage:   "<<s<<" [-option] [argument]"<<endl;
   cout<<"option:  "<<"-h  show help information"<<endl;
   cout<<"         "<<"-b ivy bus (default is 127.255.255.255:2010)"<<endl;
+  cout<<"         "<<"-n name (default is \"vectornavtest\")"<<endl;
   cout<<"         "<<"-r message rate in milliseconds"<<endl;
   cout<<"example: "<<s<<" -b 10.0.0.255:2010"<<endl;
 }
@@ -205,8 +220,9 @@ int main(int argc, char** argv) {
   char tmp;
   char* ivy_bus = NULL;
   int rate = 1000; // 1s rate is default
+  char* name = NULL;
 
-  while((tmp=getopt(argc,argv,"hb:r:"))!=-1)
+  while((tmp=getopt(argc,argv,"hb:n:r:"))!=-1)
   {
     switch(tmp)
     {
@@ -226,13 +242,16 @@ int main(int argc, char** argv) {
           return -1;
         }
         break;
+      case 'n':
+        name = optarg;
+        break;
       /*do nothing on default*/
       default:
         break;
     }
   }
 
-  VectornavTest test(ivy_bus, rate);
+  VectornavTest test(ivy_bus, rate, name);
 
 
   //Launch a thread

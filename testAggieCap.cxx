@@ -63,6 +63,7 @@ public:
   static void periodic_send_time(AggieCapTest *test);
   static void ivy_thread(AggieCapTest *test);
 
+  AggieCapTest(char *domain, bool debug, char* name);
   AggieCapTest(char *domain, bool debug);
   AggieCapTest(char *domain);
   AggieCapTest();
@@ -81,13 +82,30 @@ private:
 
   float sec_since_startup_;
 
-  const char* name_ = "aggiecap"; // ivy node name
+  string name_ = "aggiecap"; // ivy node name
   bool debug_; // are we in debug mode?
 
   // sender message names
   std::vector<std::string> camera_snapshot_ = {"CAMERA_SNAPSHOT_DL","CAMERA_SNAPSHOT"};
   std::vector<std::string> camera_payload_ = {"CAMERA_PAYLOAD_DL","CAMERA_PAYLOAD"};
 };
+
+AggieCapTest::AggieCapTest(char *domain, bool debug, char* name)
+: cb_wp_moved(OnWP_MOVED,this),
+  cb_vectornav_info(OnVECTORNAV_INFO,this),
+  cb_attitude(OnATTITUDE,this),
+  cb_gps_lla(OnGPS_LLA,this),
+  cb_rotorcraft_fp(OnROTORCRAFT_FP,this)
+  {
+  debug_ = debug;
+  sec_since_startup_ = 0.0;
+  bus_domain_= domain;
+  if(name!=NULL){
+    this->name_ = string(name);
+  }
+  bus = new Ivy(this->name_.c_str(), "AggieCapTest READY",
+      BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
+}
 
 AggieCapTest::AggieCapTest(char *domain, bool debug)
 : cb_wp_moved(OnWP_MOVED,this),
@@ -232,10 +250,18 @@ void AggieCapTest::ivy_thread(AggieCapTest *test)
       <field name="lens_temp" type="float" unit="deg_celsius" format="%.2f">Lens temperature, NaN if not measured</field>
       <field name="array_temp" type="float" unit="deg_celsius" format="%.2f">Imager sensor temperature, NaN if not measured</field>
     </message>
+
+    <message name="CAMERA_SNAPSHOT" id="128">
+      <field name="camera_id" type="uint16">Unique camera ID - consists of make,model and camera index</field>
+      <field name="camera_state" type="uint8" values="UNKNOWN|OK|ERROR">State of the given camera</field>
+      <field name="snapshot_image_number" type="uint16">Snapshot number in sequence</field>
+      <field name="snapshot_valid" type="uint8" unit="bool">Flag checking whether the last snapshot was valid</field>
+      <field name="lens_temp" type="float" unit="deg_celsius" format="%.2f">Lens temperature, NaN if not measured</field>
+      <field name="array_temp" type="float" unit="deg_celsius" format="%.2f">Imager sensor temperature, NaN if not measured</field>
+    </message>
  */
 void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
 {
-  static uint ac_id = 1; // use AC_ID and include airframe.h
   static uint camera_id = 12345;
   static uint camera_state = 0;
   static uint snapshot_image_number = 0;
@@ -244,10 +270,19 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
   static float array_temp = 33.3;
 
   while(true){
-    test->bus->SendMsg("%s %s %u %u %u %u %u %f %f",
-            test->name_,
-            test->camera_snapshot_.at(test->debug_).c_str(),
-            ac_id, camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
+    if(test->debug_){
+      test->bus->SendMsg("%s %s %u %u %u %u %f %f",
+              test->name_.c_str(),
+              test->camera_snapshot_.at(test->debug_).c_str(),
+              camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
+    }
+    else {
+      test->bus->SendMsg("%s %s %s %u %u %u %u %f %f",
+              test->name_.c_str(),
+              test->camera_snapshot_.at(test->debug_).c_str(),
+              test->name_.c_str(), camera_id, camera_state, snapshot_image_number, snapshot_valid, lens_temp, array_temp);
+    }
+
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
 
@@ -271,20 +306,36 @@ void AggieCapTest::periodic_camera_snapshot(AggieCapTest *test)
       <field name="door_status" type="uint8" values="UNKNOWN|CLOSE|OPEN">Payload door open/close</field>
       <field name="error_code" type="uint8" values="NONE|CAMERA_ERR|DOOR_ERR">Error codes of the payload</field>
     </message>
+
+    <message name="CAMERA_PAYLOAD" id="111">
+      <field name="timestamp" type="float" unit="s">Payload computer seconds since startup</field>
+      <field name="used_memory" type="uint8" unit="%">Percentage of used memory (RAM) of the payload computer rounded up to whole percent</field>
+      <field name="used_disk" type="uint8" unit="%">Percentage of used disk of the payload computer rounded up to whole percent</field>
+      <field name="door_status" type="uint8" values="UNKNOWN|CLOSE|OPEN">Payload door open/close</field>
+      <field name="error_code" type="uint8" values="NONE|CAMERA_ERR|DOOR_ERR">Error codes of the payload</field>
+    </message>
  */
 void AggieCapTest::periodic_camera_payload(AggieCapTest *test)
 {
-  static uint ac_id = 1; // use AC_ID and include airframe.h
   static uint mem = 30;
   static uint disk = 60;
   static uint door = 1;
   static uint err = 0;
 
   while(true){
-    test->bus->SendMsg("%s %s %u %f %u %u %u %u",
-            test->name_,
-            test->camera_payload_.at(test->debug_).c_str(),
-            ac_id, test->sec_since_startup_, mem, disk, door, err);
+    if(test->debug_){
+      test->bus->SendMsg("%s %s %f %u %u %u %u",
+              test->name_.c_str(),
+              test->camera_payload_.at(test->debug_).c_str(),
+              test->sec_since_startup_, mem, disk, door, err);
+    }
+    else {
+      test->bus->SendMsg("%s %s %s %f %u %u %u %u",
+              test->name_.c_str(),
+              test->camera_payload_.at(test->debug_).c_str(),
+              test->name_.c_str(), test->sec_since_startup_, mem, disk, door, err);
+    }
+
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // increment variables
@@ -313,8 +364,8 @@ void AggieCapTest::periodic_move_wp(AggieCapTest *test)
   static int alt = 1350*1000; // 1350 m
 
   while(true){
-    test->bus->SendMsg("aggiecap MOVE_WP %u %u %d %d %d",
-        wp_id, ac_id, lat, lon, alt);
+    test->bus->SendMsg("%s MOVE_WP %u %u %d %d %d",
+        test->name_.c_str(),wp_id, ac_id, lat, lon, alt);
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
     // increment variables
@@ -339,7 +390,7 @@ void AggieCapTest::periodic_send_time(AggieCapTest *test)
     time (&rawtime);
 
     // broadcast
-    test->bus->SendMsg("aggiecap TIME %u", (uint32_t)rawtime);
+    test->bus->SendMsg("%s TIME %u", test->name_.c_str(),(uint32_t)rawtime);
 
     // sleep for 5 seconds
     std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -352,6 +403,7 @@ void showhelpinfo(char *s) {
   cout<<"option:  "<<"-h  show help information"<<endl;
   cout<<"         "<<"-b ivy bus (default is 127.255.255.255:2010)"<<endl;
   cout<<"         "<<"-d simulation mode on/off (default is false, use 'true' or '1')"<<endl;
+  cout<<"         "<<"-n name (default is \"AggieCapTest\")"<<endl;
   cout<<"example: "<<s<<" -b 10.0.0.255:2010"<<endl;
 }
 
@@ -359,8 +411,9 @@ int main(int argc, char** argv) {
   char tmp;
   char* ivy_bus = NULL;
   bool debug = false;
+  char* name = NULL;
 
-  while((tmp=getopt(argc,argv,"hb:d:"))!=-1)
+  while((tmp=getopt(argc,argv,"hb:d:n:"))!=-1)
   {
     switch(tmp)
     {
@@ -383,13 +436,16 @@ int main(int argc, char** argv) {
           debug = true;
         }
         break;
+      case 'n':
+        name = optarg;
+        break;
       /*do nothing on default*/
       default:
         break;
     }
   }
 
-  AggieCapTest test(ivy_bus, debug);
+  AggieCapTest test(ivy_bus, debug, name);
 
 
   //Launch a thread

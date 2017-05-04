@@ -55,6 +55,7 @@ public:
   static void periodic_send_status(CopilotTest *test);
   static void ivy_thread(CopilotTest *test);
 
+  CopilotTest(char *domain, bool debug, char* name);
   CopilotTest(char *domain, bool debug);
   CopilotTest(char *domain);
   CopilotTest();
@@ -75,12 +76,29 @@ private:
 
   Clock::time_point t0;
 
-  const char* name_ = "copilot"; // ivy node name
+  string name_ = "copilot"; // ivy node name
   bool debug_; // are we in debug mode?
 
   // sender message names
   std::vector<std::string> copilot_status_ = {"COPILOT_STATUS_DL","COPILOT_STATUS"};
 };
+
+CopilotTest::CopilotTest(char *domain, bool debug, char* name)
+: cb_time(OnTIME,this)
+  {
+  debug_ = debug;
+  sec_since_startup_ = 0.0;
+  status_ = INIT;
+  rawtime_ = 0;
+  timeinfo_ = NULL;
+  if(name != NULL){
+    this->name_ = string(name);
+  }
+
+  bus_domain_= domain;
+  bus = new Ivy( this->name_.c_str(), "CopilotTest READY",
+      BUS_APPLICATION_CALLBACK(  ivyAppConnCb, ivyAppDiscConnCb ),false);
+}
 
 CopilotTest::CopilotTest(char *domain, bool debug)
 : cb_time(OnTIME,this)
@@ -339,6 +357,14 @@ void CopilotTest::ivy_thread(CopilotTest *test)
       <field name="status" type="uint8" values="UNKNOWN|RUNNING|FAULT">Mission computer status</field>
       <field name="error_code" type="uint8" values="NONE|IO_ERROR">Error codes of the mission computer</field>
     </message>
+
+    <message name="COPILOT_STATUS" id="125">
+      <field name="timestamp" type="float" unit="s">Mission computer seconds since startup</field>
+      <field name="used_memory" type="uint8" unit="%">Percentage of used memory (RAM) of the mission computer rounded up to whole percent</field>
+      <field name="used_disk" type="uint8" unit="%">Percentage of used disk of the mission computer rounded up to whole percent</field>
+      <field name="status" type="uint8" values="UNKNOWN|INIT|LOGGING|FAULT">Mission computer status</field>
+      <field name="error_code" type="uint8" values="NONE|IO_ERROR">Error codes of the mission computer</field>
+    </message>
  */
 void CopilotTest::periodic_send_status(CopilotTest *test)
 {
@@ -348,10 +374,29 @@ void CopilotTest::periodic_send_status(CopilotTest *test)
   static uint err = 0;
 
   while(true){
-    test->bus->SendMsg("%s %s %u %f %u %u %u %u",
-            test->name_,
-            test->copilot_status_.at(test->debug_).c_str(),
-            ac_id, test->sec_since_startup_, mem, disk, test->status_, err);
+
+    if(test->debug_){
+      test->bus->SendMsg("%s %s %f %u %u %u %u",
+              test->name_.c_str(),
+              test->copilot_status_.at(test->debug_).c_str(),
+              test->sec_since_startup_,
+              mem,
+              disk,
+              test->status_,
+              err);
+    }
+    else {
+      test->bus->SendMsg("%s %s %u %f %u %u %u %u",
+              test->name_.c_str(),
+              test->copilot_status_.at(test->debug_).c_str(),
+              ac_id,
+              test->sec_since_startup_,
+              mem,
+              disk,
+              test->status_,
+              err);
+    }
+
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // increment variables
@@ -367,6 +412,7 @@ void showhelpinfo(char *s) {
   cout<<"option:  "<<"-h  show help information"<<endl;
   cout<<"         "<<"-b ivy bus (default is 127.255.255.255:2010)"<<endl;
   cout<<"         "<<"-d simulation mode (default is false, use 'true' or '1')"<<endl;
+  cout<<"         "<<"-n name (default is \"copilotTest\")"<<endl;
   cout<<"example: "<<s<<" -b 10.0.0.255:2010"<<endl;
 }
 
@@ -374,8 +420,9 @@ int main(int argc, char** argv) {
   char tmp;
   char* ivy_bus = NULL;
   bool debug = false;
+  char* name = NULL;
 
-  while((tmp=getopt(argc,argv,"hb:d:"))!=-1)
+  while((tmp=getopt(argc,argv,"hb:d:n:"))!=-1)
   {
     switch(tmp)
     {
@@ -398,13 +445,16 @@ int main(int argc, char** argv) {
           debug = true;
         }
         break;
+      case 'n':
+        name = optarg;
+        break;
       /*do nothing on default*/
       default:
         break;
     }
   }
 
-  CopilotTest test(ivy_bus, debug);
+  CopilotTest test(ivy_bus, debug, name);
 
 
   //Launch a thread
