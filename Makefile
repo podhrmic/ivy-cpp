@@ -92,6 +92,9 @@ testAggieCap : testAggieCap.cxx
 testVectornav : testVectornav.cxx
 	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testVectornav.cxx -lIvy -pthread
 
+testPingPong : testPingPong.cxx
+	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testPingPong.cxx -lIvy -pthread
+
 distclean clean : 
 	rm -f $(LIBIVY_STATIC) $(LIBIVY_SHARED) \
 		$(OBJECTS) $(DEPS) \
