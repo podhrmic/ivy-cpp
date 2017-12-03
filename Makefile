@@ -57,7 +57,7 @@ else
 endif
 
 default: $(LIBIVY_STATIC) $(LIBIVY_SHARED) \
-	 testIvy testAggieCap testCopilot
+	 testIvy testAggieCap testCopilot testVectornav testPingPong ivyLogger
 
 %.o: %.cxx
 	$(CC) -c $<
@@ -94,11 +94,14 @@ testVectornav : testVectornav.cxx
 
 testPingPong : testPingPong.cxx
 	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  testPingPong.cxx -lIvy -pthread
+	
+ivyLogger : IvyLogger.cxx
+	g++  -g  $(CPPFLAGS) $(LLDLIBS) -std=c++11 -o $@  IvyLogger.cxx -lIvy -pthread
 
 distclean clean : 
 	rm -f $(LIBIVY_STATIC) $(LIBIVY_SHARED) \
 		$(OBJECTS) $(DEPS) \
-		core *.o *.d *~ *.moc testIvy testAggieCap testCopilot testVectornav
+		core *.o *.d *~ *.moc testIvy testAggieCap testCopilot testVectornav testPingPong ivyLogger
 
 -include *.d
 

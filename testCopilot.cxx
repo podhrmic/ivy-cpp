@@ -173,8 +173,6 @@ void CopilotTest::OnTIME ( IvyApplication *app, void *user_data, int argc, const
     // update clock
     copilot->t0 = Clock::now();
   }
-
-
 }
 
 /**
