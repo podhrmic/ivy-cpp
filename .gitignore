@@ -32,6 +32,7 @@ testAggieCap
 testCopilot
 testVectornav
 testPingPong
+ivyLogger
 
 # Eclipse project files
 .settings
