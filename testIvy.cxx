@@ -275,7 +275,7 @@ void IvyTest::message_thread(IvyTest *test)
       test->bus->SendMsg(
           "%mission_planner MISSION_GOTO_WP %u %u %f %f %f %f %u", id, insert,
           wp_east, wp_north, wp_alt, duration, index);
-      std::this_thread::sleep_for(std::chrono::seconds(10));
+      std::this_thread::sleep_for(std::chrono::seconds(20));
     }
   }
 
