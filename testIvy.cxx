@@ -42,6 +42,7 @@ private:
 };
 
 bool evil;
+int ac_id;
 
 IvyTest::IvyTest(char* ivy_bus) :
     world_env_cb(OnWORLD_ENV, this)
@@ -243,7 +244,7 @@ void IvyTest::message_thread(IvyTest *test)
 
   // WORKS
   // time is irrelevant, exits upon reaching a waypoint
-  static uint8_t id = 21;
+  static uint8_t id = ac_id;
   static uint8_t insert = 3;  // replace
   static float wp_east = 50;
   static float wp_north = 0;
@@ -293,6 +294,7 @@ void showhelpinfo(char *s)
   cout << "option:  " << "-h  show help information" << endl;
   cout << "evil link" << "-e  evil mode" << endl;
   cout << "         " << "-b ivy bus (default is 127.255.255.255:2010)" << endl;
+  cout << "         " << "-a ac_id" << endl;
   cout << "example: " << s << " -b 10.0.0.255:2010" << endl;
 }
 
@@ -301,8 +303,9 @@ int main(int argc, char** argv)
   char tmp;
   char* ivy_bus = NULL;
   evil = false;
+  ac_id = 0;
 
-  while ((tmp = getopt(argc, argv, "hb:e")) != -1) {
+  while ((tmp = getopt(argc, argv, "hb:ea:")) != -1) {
     switch (tmp) {
       /*option h show the help information*/
       case 'h':
@@ -316,10 +319,19 @@ int main(int argc, char** argv)
       case 'e':
         evil = true;
         break;
+      case 'a':
+        ac_id = atoi(optarg);
+        cout << "-a " << ac_id << endl;
+        break;
         /*do nothing on default*/
       default:
         break;
     }
+  }
+
+  if (ac_id == 0) {
+    cout << "Error, ac_id not set." << endl;
+    exit(1);
   }
 
   IvyTest test(ivy_bus);
