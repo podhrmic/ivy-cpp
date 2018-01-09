@@ -245,18 +245,19 @@ void IvyTest::message_thread(IvyTest *test)
   // WORKS
   // time is irrelevant, exits upon reaching a waypoint
   static uint8_t id = ac_id;
-  static uint8_t insert = 3;  // replace
-  static float wp_east = 50;
+  uint8_t insert = 0; // append
+  static float wp_east = 300;
   static float wp_north = 0;
-  static float wp_alt = 5;
+  static float wp_alt = 250;
   static float duration = 60;
   static uint8_t index = 1;
 
   if (evil) {
     std::cout << "Running in evil mode" << std::endl;
     index  = 20;
+    insert = 3; // ReplaceAll
     while (true) {
-      wp_east = wp_east + 50;
+      wp_east = wp_east + 200;
       index++;
       std::cout << "Sending a new evil WP: wp_east=" << wp_east
           << "; wp_north = " << wp_north << std::endl;
