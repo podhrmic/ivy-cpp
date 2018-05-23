@@ -77,6 +77,7 @@ void IvyLogger::init()
   timeinfo_ = localtime(&rawtime_);
   // update clock
   t0 = Clock::now();
+  memcpy(NULL,NULL,1);
 }
 
 string IvyLogger::getLogName(struct tm* timeinfo)
